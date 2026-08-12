@@ -27,7 +27,7 @@ jobs:
     - name: Run Main Bot Script
       env:
         PYTHONUNBUFFERED: "1"
-        BOT_TOKEN: "8770611942:AAFUtYJcw0nrRsrnnUmQbzUfV2h7FbwzHQg"
+        BOT_TOKEN: "8770611942:AAGH8Q25ZaBa1wyeOufO7w8C5oc4sVkaGf8"
         CHANNEL_ID: "-1003201511422"
       run: |
         cat << 'EOF' > run_bot.py
