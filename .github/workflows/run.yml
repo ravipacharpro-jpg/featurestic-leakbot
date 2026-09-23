@@ -19,73 +19,17 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install PyTelegramBotAPI
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyTelegramBotAPI requests
+        pip install -r requirements.txt
 
     - name: Run Main Bot Script
       env:
         PYTHONUNBUFFERED: "1"
-        BOT_TOKEN: "8770611942:AAGH8Q25ZaBa1wyeOufO7w8C5oc4sVkaGf8"
-        CHANNEL_ID: "-1003201511422"
-      run: |
-        cat << 'EOF' > run_bot.py
-        import os
-        import time
-        import telebot
-        from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-        BOT_TOKEN = os.getenv("BOT_TOKEN")
-        CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
-
-        bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
-        print("--- ENGINE LIVE: STARTING POLLING ---", flush=True)
-
-        @bot.message_handler(commands=['start'])
-        def send_welcome(message):
-            try:
-                bot_username = bot.get_me().username
-                markup = InlineKeyboardMarkup()
-                admin_url = f"https://t.me/{bot_username}?startchannel=true&admin=post_messages+edit_messages+delete_messages"
-                markup.add(InlineKeyboardButton("➕ Add Bot to Channel", url=admin_url))
-                
-                welcome_text = "👋 **Welcome!**\n\nFiles ko bina caption ke channel me forward karne ke liye mujhe admin banayein:"
-                bot.reply_to(message, welcome_text, parse_mode='Markdown', reply_markup=markup)
-                print(f"-> Start command triggered by {message.from_user.id}", flush=True)
-            except Exception as e:
-                print(f"Error start: {e}", flush=True)
-
-        @bot.message_handler(content_types=['document', 'video', 'photo', 'audio', 'voice'])
-        def handle_incoming_media(message):
-            try:
-                print(f"-> Processing media: {message.content_type}", flush=True)
-                if message.document:
-                    bot.send_document(CHANNEL_ID, message.document.file_id, caption=None)
-                elif message.video:
-                    bot.send_video(CHANNEL_ID, message.video.file_id, caption=None)
-                elif message.photo:
-                    bot.send_photo(CHANNEL_ID, message.photo[-1].file_id, caption=None)
-                elif message.audio:
-                    bot.send_audio(CHANNEL_ID, message.audio.file_id, caption=None)
-                elif message.voice:
-                    bot.send_voice(CHANNEL_ID, message.voice.file_id, caption=None)
-
-                bot.reply_to(message, "✅ Successfully Uploaded to Channel!")
-            except Exception as e:
-                print(f"Error media: {e}", flush=True)
-                bot.reply_to(message, f"❌ Failed: {e}")
-
-        if __name__ == "__main__":
-            start_time = time.time()
-            while time.time() - start_time < 16200: 
-                try:
-                    bot.polling(none_stop=True, interval=2, timeout=40)
-                except Exception as e:
-                    print(f"Re-polling injection due to: {e}", flush=True)
-                    time.sleep(5)
-        EOF
-        python run_bot.py
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      run: python bot.py
 
     - name: Trigger Next Loop (24x7 Continuous)
       if: always()
