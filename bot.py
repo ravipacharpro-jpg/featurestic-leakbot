@@ -21,17 +21,27 @@ pending_albums = {}
 recently_sent = {}
 
 
+def get_zip_caption(msg):
+    """Return caption only for ZIP files, None otherwise"""
+    if msg.document and msg.document.file_name:
+        name = msg.document.file_name.lower()
+        if name.endswith('.zip'):
+            return "Join @FeaturesticLeak"
+    return None
+
+
 def send_single(msg):
+    caption = get_zip_caption(msg)
     if msg.document:
-        bot.send_document(CHANNEL_ID, msg.document.file_id, caption=None)
+        bot.send_document(CHANNEL_ID, msg.document.file_id, caption=caption)
     elif msg.video:
-        bot.send_video(CHANNEL_ID, msg.video.file_id, caption=None)
+        bot.send_video(CHANNEL_ID, msg.video.file_id, caption=caption)
     elif msg.photo:
-        bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, caption=None)
+        bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, caption=caption)
     elif msg.audio:
-        bot.send_audio(CHANNEL_ID, msg.audio.file_id, caption=None)
+        bot.send_audio(CHANNEL_ID, msg.audio.file_id, caption=caption)
     elif msg.voice:
-        bot.send_voice(CHANNEL_ID, msg.voice.file_id)
+        bot.send_voice(CHANNEL_ID, msg.voice.file_id, caption=caption)
 
 
 def to_input_media(msg):
@@ -92,7 +102,9 @@ def handle_media(message):
 
     recently_sent[gid] = time.time()
     try:
-        bot.send_media_group(CHANNEL_ID, medias)
+        # Use caption only if first item is a ZIP file
+        first_zip_caption = get_zip_caption(items[0]) if items else None
+        bot.send_media_group(CHANNEL_ID, medias, caption=first_zip_caption)
         bot.reply_to(items[0], f"✅ Album uploaded as one post ({len(medias)} media)!")
     except Exception as e:
         bot.reply_to(items[0], f"❌ Failed: {e}")
