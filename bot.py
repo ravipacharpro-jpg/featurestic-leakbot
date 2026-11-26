@@ -20,6 +20,8 @@ PUBLIC_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 
 ALBUM_WAIT = 2.5
+ZIP_CAPTION = "<b>Join @FeaturesticLeak</b>"
+CAPTION_PARSE_MODE = "HTML"
 lock = threading.Lock()
 pending_albums = {}
 recently_sent = {}
@@ -30,22 +32,23 @@ def get_zip_caption(msg):
     if msg.document and msg.document.file_name:
         name = msg.document.file_name.lower()
         if name.endswith('.zip'):
-            return "Join @FeaturesticLeak"
+            return ZIP_CAPTION
     return None
 
 
 def send_single(msg):
     caption = get_zip_caption(msg)
+    kwargs = {"caption": caption, "parse_mode": CAPTION_PARSE_MODE} if caption else {}
     if msg.document:
-        bot.send_document(CHANNEL_ID, msg.document.file_id, caption=caption)
+        bot.send_document(CHANNEL_ID, msg.document.file_id, **kwargs)
     elif msg.video:
-        bot.send_video(CHANNEL_ID, msg.video.file_id, caption=caption)
+        bot.send_video(CHANNEL_ID, msg.video.file_id, **kwargs)
     elif msg.photo:
-        bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, caption=caption)
+        bot.send_photo(CHANNEL_ID, msg.photo[-1].file_id, **kwargs)
     elif msg.audio:
-        bot.send_audio(CHANNEL_ID, msg.audio.file_id, caption=caption)
+        bot.send_audio(CHANNEL_ID, msg.audio.file_id, **kwargs)
     elif msg.voice:
-        bot.send_voice(CHANNEL_ID, msg.voice.file_id, caption=caption)
+        bot.send_voice(CHANNEL_ID, msg.voice.file_id, **kwargs)
 
 
 def to_input_media(msg):
@@ -109,6 +112,7 @@ def handle_media(message):
     first_zip_caption = get_zip_caption(items[0]) if items else None
     if first_zip_caption:
         medias[0].caption = first_zip_caption
+        medias[0].parse_mode = CAPTION_PARSE_MODE
 
     recently_sent[gid] = time.time()
     try:
