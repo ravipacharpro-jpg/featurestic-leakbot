@@ -104,11 +104,15 @@ def handle_media(message):
     if not medias:
         return
 
+    # send_media_group() has no `caption` argument. Telegram only shows a
+    # caption on the first item, so set it on that InputMedia object.
+    first_zip_caption = get_zip_caption(items[0]) if items else None
+    if first_zip_caption:
+        medias[0].caption = first_zip_caption
+
     recently_sent[gid] = time.time()
     try:
-        # Use caption only if first item is a ZIP file
-        first_zip_caption = get_zip_caption(items[0]) if items else None
-        bot.send_media_group(CHANNEL_ID, medias, caption=first_zip_caption)
+        bot.send_media_group(CHANNEL_ID, medias)
         bot.reply_to(items[0], f"✅ Album uploaded as one post ({len(medias)} media)!")
     except Exception as e:
         bot.reply_to(items[0], f"❌ Failed: {e}")
