@@ -1,6 +1,7 @@
 import os
 import time
 import threading
+import urllib.request
 
 import telebot
 from telebot.types import (
@@ -9,11 +10,14 @@ from telebot.types import (
     InputMediaPhoto,
     InputMediaVideo,
 )
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL_ID = int(os.environ["CHANNEL_ID"])
+PORT = int(os.environ.get("PORT", "10000"))
+PUBLIC_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
 
-bot = telebot.TeleBot(BOT_TOKEN)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 
 ALBUM_WAIT = 2.5
 lock = threading.Lock()
@@ -110,11 +114,43 @@ def handle_media(message):
         bot.reply_to(items[0], f"❌ Failed: {e}")
 
 
-if __name__ == "__main__":
-    start_time = time.time()
-    while time.time() - start_time < 16200:
+def run_polling():
+    """Keep polling forever. Render restarts the process if it ever exits."""
+    while True:
         try:
+            print("Bot polling started...", flush=True)
             bot.polling(none_stop=True, interval=2, timeout=40)
         except Exception as e:
             print(f"Re-polling due to: {e}", flush=True)
             time.sleep(5)
+
+
+def keep_alive():
+    """Free Render web services sleep after 15 min idle. Ping ourselves every 9 min."""
+    if not PUBLIC_URL:
+        return
+    while True:
+        time.sleep(540)
+        try:
+            with urllib.request.urlopen(PUBLIC_URL + "/health", timeout=10) as r:
+                print(f"Keep-alive: {r.status}", flush=True)
+        except Exception as e:
+            print(f"Keep-alive failed: {e}", flush=True)
+
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write("Bot alive".encode("utf-8"))
+
+    def log_message(self, *args):
+        pass  # keep logs clean
+
+
+if __name__ == "__main__":
+    threading.Thread(target=run_polling, daemon=True).start()
+    threading.Thread(target=keep_alive, daemon=True).start()
+    print(f"Health server on 0.0.0.0:{PORT} (public: {PUBLIC_URL or 'n/a'})", flush=True)
+    ThreadingHTTPServer(("0.0.0.0", PORT), HealthHandler).serve_forever()
