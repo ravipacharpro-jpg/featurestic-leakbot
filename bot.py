@@ -20,24 +20,22 @@ PUBLIC_URL = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
 bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
 
 ALBUM_WAIT = 2.5
-ZIP_CAPTION = "<b>Join @FeaturesticLeak</b>"
+FILE_CAPTION = "<b>Join @FeaturesticLeak</b>"
 CAPTION_PARSE_MODE = "HTML"
 lock = threading.Lock()
 pending_albums = {}
 recently_sent = {}
 
 
-def get_zip_caption(msg):
-    """Return caption only for ZIP files, None otherwise"""
-    if msg.document and msg.document.file_name:
-        name = msg.document.file_name.lower()
-        if name.endswith('.zip'):
-            return ZIP_CAPTION
+def get_file_caption(msg):
+    """Caption for every document/file, never for photos or videos"""
+    if msg.document:
+        return FILE_CAPTION
     return None
 
 
 def send_single(msg):
-    caption = get_zip_caption(msg)
+    caption = get_file_caption(msg)
     kwargs = {"caption": caption, "parse_mode": CAPTION_PARSE_MODE} if caption else {}
     if msg.document:
         bot.send_document(CHANNEL_ID, msg.document.file_id, **kwargs)
@@ -109,9 +107,9 @@ def handle_media(message):
 
     # send_media_group() has no `caption` argument. Telegram only shows a
     # caption on the first item, so set it on that InputMedia object.
-    first_zip_caption = get_zip_caption(items[0]) if items else None
-    if first_zip_caption:
-        medias[0].caption = first_zip_caption
+    first_file_caption = get_file_caption(items[0]) if items else None
+    if first_file_caption:
+        medias[0].caption = first_file_caption
         medias[0].parse_mode = CAPTION_PARSE_MODE
 
     recently_sent[gid] = time.time()
